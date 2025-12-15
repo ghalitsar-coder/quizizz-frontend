@@ -32,7 +32,9 @@ export default function Home() {
       {/* Logo & Title */}
       <div className="flex items-center gap-3 mb-8 animate-fade-in">
         <Gamepad2 className="w-12 h-12 text-white" />
-        <h1 className="text-4xl md:text-5xl font-bold text-white">Quizizz Clone</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-white">
+          Quizizz Clone
+        </h1>
       </div>
 
       {/* Join Game Card */}
@@ -40,17 +42,17 @@ export default function Home() {
         <h2 className="text-xl font-semibold text-white text-center">
           Masuk ke Game
         </h2>
-        
+
         <Input
           type="text"
           placeholder="Masukkan Kode Game"
           value={gameCode}
           onChange={(e) => setGameCode(e.target.value.toUpperCase())}
           maxLength={6}
-          onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+          onKeyDown={(e) => e.key === "Enter" && handleJoin()}
           className="text-center text-2xl font-bold h-14 bg-white border-none placeholder:text-gray-400 text-gray-900"
         />
-        
+
         <Button
           onClick={handleJoin}
           disabled={gameCode.trim().length < 5}
@@ -64,7 +66,10 @@ export default function Home() {
       <div className="mt-8 text-center">
         <p className="text-white/60 text-sm mb-2">
           Guru?{" "}
-          <Link href="/login" className="text-white underline hover:text-white/90">
+          <Link
+            href="/login"
+            className="text-white underline hover:text-white/90"
+          >
             Login di sini
           </Link>
         </p>

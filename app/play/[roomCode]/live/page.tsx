@@ -16,7 +16,7 @@ export default function GameArenaPage() {
   const params = useParams();
   const router = useRouter();
   const { socket, isConnected } = useSocket();
-  
+
   // Zustand store
   const gameState = useGameStore((state) => state.gameState);
   const setGameState = useGameStore((state) => state.setGameState);
@@ -42,18 +42,21 @@ export default function GameArenaPage() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("game:started", (data: { questionCount: number; quizId?: string }) => {
-      console.log("🎮 Game started:", data);
-      setTotalQuestions(data.questionCount || 0);
-      
-      // Backend now includes quizId (per BACKEND_CHANGES_SUMMARY.md)
-      if (data.quizId) {
-        setQuizId(data.quizId);
-        console.log("✅ Quiz ID received:", data.quizId);
+    socket.on(
+      "game:started",
+      (data: { questionCount: number; quizId?: string }) => {
+        console.log("🎮 Game started:", data);
+        setTotalQuestions(data.questionCount || 0);
+
+        // Backend now includes quizId (per BACKEND_CHANGES_SUMMARY.md)
+        if (data.quizId) {
+          setQuizId(data.quizId);
+          console.log("✅ Quiz ID received:", data.quizId);
+        }
+
+        // Note: Questions delivered via question_start events (socket-based approach)
       }
-      
-      // Note: Questions delivered via question_start events (socket-based approach)
-    });
+    );
 
     return () => {
       socket.off("game:started");
@@ -67,7 +70,7 @@ export default function GameArenaPage() {
     // Question starts (backend sends full question data via socket)
     socket.on("question_start", (data: any) => {
       console.log("📝 Question started:", data);
-      
+
       setCurrentQuestion({
         qIndex: data.qIndex,
         qText: data.qText,
@@ -76,7 +79,7 @@ export default function GameArenaPage() {
         duration: data.duration,
         points: data.points || 20,
       });
-      
+
       setSelectedAnswer(null);
       setAnswerResult(null);
       setGameState("PLAYING");
@@ -99,7 +102,7 @@ export default function GameArenaPage() {
     // Question ends (time up) - sync with server timer
     socket.on("question_end", (data: any) => {
       console.log("⏱️ Question ended (server):", data);
-      
+
       // Force stop timer and disable answers (server says time is up)
       if (!answerResult) {
         setAnswerResult({
@@ -117,7 +120,7 @@ export default function GameArenaPage() {
       console.log("Leaderboard updated:", data);
       const leaderboardData = data.leaderboard || data;
       setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : []);
-      
+
       // Show leaderboard after short delay
       setTimeout(() => {
         setGameState("LEADERBOARD");
@@ -159,7 +162,17 @@ export default function GameArenaPage() {
       socket.off("error_message");
       socket.offAny();
     };
-  }, [socket, setGameState, setCurrentQuestion, setAnswerResult, setLeaderboard, setSelectedAnswer, setScore, answerResult, score]);
+  }, [
+    socket,
+    setGameState,
+    setCurrentQuestion,
+    setAnswerResult,
+    setLeaderboard,
+    setSelectedAnswer,
+    setScore,
+    answerResult,
+    score,
+  ]);
 
   // Submit answer
   const submitAnswer = useCallback(
@@ -168,7 +181,7 @@ export default function GameArenaPage() {
 
       const timeElapsed = (Date.now() - answerStartTime.current) / 1000;
       setSelectedAnswer(answerIdx);
-      
+
       socket.emit("submit_answer", {
         roomCode,
         answerIdx,
@@ -263,25 +276,35 @@ export default function GameArenaPage() {
       {gameState === "RESULT" && (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-3xl p-8 text-center">
-            <h1 className="text-4xl font-bold text-white mb-6">Game Selesai!</h1>
+            <h1 className="text-4xl font-bold text-white mb-6">
+              Game Selesai!
+            </h1>
             <div className="mb-8">
               <p className="text-white/80 text-lg mb-2">Skor Akhir Kamu:</p>
               <p className="text-6xl font-bold text-white">{score} pt</p>
             </div>
-            
+
             {leaderboard.length > 0 && (
               <div className="space-y-3 mb-8">
-                <h3 className="text-xl font-semibold text-white mb-4">Top 3 Players</h3>
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  Top 3 Players
+                </h3>
                 {leaderboard.slice(0, 3).map((player, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-3 bg-white/10 rounded-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</span>
-                      <span className="text-white font-semibold">{player.name}</span>
+                      <span className="text-2xl">
+                        {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                      </span>
+                      <span className="text-white font-semibold">
+                        {player.name}
+                      </span>
                     </div>
-                    <span className="text-white font-bold">{player.score} pt</span>
+                    <span className="text-white font-bold">
+                      {player.score} pt
+                    </span>
                   </div>
                 ))}
               </div>

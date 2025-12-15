@@ -43,22 +43,25 @@ export default function LobbyPage() {
     if (!socket) return;
 
     // Listen for successful join
-    socket.on("player_joined_success", (data: { 
-      status: string;
-      quizTitle?: string;
-      questionCount?: number;
-    }) => {
-      console.log("✅ Successfully joined room:", data);
-      setHasJoined(true);
-      setIsJoining(false);
-      setPlayerName(localNickname);
-      
-      // Store quiz metadata (backend updated payload)
-      if (data.quizTitle) setQuizTitle(data.quizTitle);
-      if (data.questionCount) setQuestionCount(data.questionCount);
-      
-      toast.success("Berhasil bergabung ke room!");
-    });
+    socket.on(
+      "player_joined_success",
+      (data: {
+        status: string;
+        quizTitle?: string;
+        questionCount?: number;
+      }) => {
+        console.log("✅ Successfully joined room:", data);
+        setHasJoined(true);
+        setIsJoining(false);
+        setPlayerName(localNickname);
+
+        // Store quiz metadata (backend updated payload)
+        if (data.quizTitle) setQuizTitle(data.quizTitle);
+        if (data.questionCount) setQuestionCount(data.questionCount);
+
+        toast.success("Berhasil bergabung ke room!");
+      }
+    );
 
     // Listen for game start (sesuai PRD_BACKEND.md: event name = "game:started")
     const handleGameStart = (data?: any) => {
@@ -213,8 +216,12 @@ export default function LobbyPage() {
           </CardDescription>
           {quizTitle && (
             <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-              <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Quiz:</p>
-              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{quizTitle}</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                Quiz:
+              </p>
+              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                {quizTitle}
+              </p>
               {questionCount > 0 && (
                 <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
                   {questionCount} pertanyaan

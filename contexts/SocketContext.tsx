@@ -115,7 +115,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   );
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, isReconnecting, emit }}>
+    <SocketContext.Provider
+      value={{ socket, isConnected, isReconnecting, emit }}
+    >
       {children}
     </SocketContext.Provider>
   );
