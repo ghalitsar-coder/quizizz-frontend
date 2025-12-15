@@ -80,27 +80,26 @@
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
-
-    /* Quizizz Game Colors */
-    /* --game-red: 0 84% 60%;
-    --game-red-hover: 0 84% 50%;
-    --game-blue: 217 91% 60%;
-    --game-blue-hover: 217 91% 50%;
-    --game-yellow: 45 93% 47%;
-    --game-yellow-hover: 45 93% 40%;
-    --game-green: 142 71% 45%;
-    --game-green-hover: 142 71% 38%; */
-    
-    /* Game UI Colors */
-    /* --game-bg-start: 260 60% 50%;
-    --game-bg-end: 280 70% 35%;
-    --game-card: 260 30% 20%;
-    --game-card-foreground: 0 0% 100%;
-    --game-correct: 142 71% 45%;
-    --game-incorrect: 0 84% 60%;
-    --game-timer-safe: 142 71% 45%;
-    --game-timer-warning: 45 93% 47%;
-    --game-timer-danger: 0 84% 60%; */
+  /* Quizizz Game Colors */
+  --game-red: 0 84% 60%;
+  --game-red-hover: 0 84% 50%;
+  --game-blue: 217 91% 60%;
+  --game-blue-hover: 217 91% 50%;
+  --game-yellow: 45 93% 47%;
+  --game-yellow-hover: 45 93% 40%;
+  --game-green: 142 71% 45%;
+  --game-green-hover: 142 71% 38%;
+  
+  /* Game UI Colors */
+  --game-bg-start: 260 60% 50%;
+  --game-bg-end: 280 70% 35%;
+  --game-card: 260 30% 20%;
+  --game-card-foreground: 0 0% 100%;
+  --game-correct: 142 71% 45%;
+  --game-incorrect: 0 84% 60%;
+  --game-timer-safe: 142 71% 45%;
+  --game-timer-warning: 45 93% 47%;
+  --game-timer-danger: 0 84% 60%;
 }
 
 .dark {
@@ -136,26 +135,25 @@
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
-
-      /* Quizizz Game Colors - Same for dark mode */
-    /* --game-red: 0 84% 60%;
-    --game-red-hover: 0 84% 55%;
-    --game-blue: 217 91% 60%;
-    --game-blue-hover: 217 91% 55%;
-    --game-yellow: 45 93% 47%;
-    --game-yellow-hover: 45 93% 42%;
-    --game-green: 142 71% 45%;
-    --game-green-hover: 142 71% 40%;
-    
-    --game-bg-start: 260 60% 50%;
-    --game-bg-end: 280 70% 35%;
-    --game-card: 260 30% 20%;
-    --game-card-foreground: 0 0% 100%;
-    --game-correct: 142 71% 45%;
-    --game-incorrect: 0 84% 60%;
-    --game-timer-safe: 142 71% 45%;
-    --game-timer-warning: 45 93% 47%;
-    --game-timer-danger: 0 84% 60%; */
+  /* Quizizz Game Colors - Same for dark mode */
+  --game-red: 0 84% 60%;
+  --game-red-hover: 0 84% 55%;
+  --game-blue: 217 91% 60%;
+  --game-blue-hover: 217 91% 55%;
+  --game-yellow: 45 93% 47%;
+  --game-yellow-hover: 45 93% 42%;
+  --game-green: 142 71% 45%;
+  --game-green-hover: 142 71% 40%;
+  
+  --game-bg-start: 260 60% 50%;
+  --game-bg-end: 280 70% 35%;
+  --game-card: 260 30% 20%;
+  --game-card-foreground: 0 0% 100%;
+  --game-correct: 142 71% 45%;
+  --game-incorrect: 0 84% 60%;
+  --game-timer-safe: 142 71% 45%;
+  --game-timer-warning: 45 93% 47%;
+  --game-timer-danger: 0 84% 60%;
 }
 
 @layer base {
@@ -166,7 +164,7 @@
     @apply bg-background text-foreground;
   }
 
-  /* .game-gradient {
+  .game-gradient {
     background: linear-gradient(135deg, hsl(var(--game-bg-start)), hsl(var(--game-bg-end)));
-  } */
+  }
 }

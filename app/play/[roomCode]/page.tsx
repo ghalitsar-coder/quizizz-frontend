@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSocket } from "@/contexts/SocketContext";
-import { useGame } from "@/contexts/GameContext";
+import { useGameStore } from "@/stores/game-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,11 +20,16 @@ export default function LobbyPage() {
   const params = useParams();
   const router = useRouter();
   const { socket, isConnected } = useSocket();
-  const { setRoomCode, playerName, setPlayerName, setGameState } = useGame();
+  const setRoomCode = useGameStore((state) => state.setRoomCode);
+  const playerName = useGameStore((state) => state.playerName);
+  const setPlayerName = useGameStore((state) => state.setPlayerName);
+  const setGameState = useGameStore((state) => state.setGameState);
 
   const [localNickname, setLocalNickname] = useState("");
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [quizTitle, setQuizTitle] = useState<string>("");
+  const [questionCount, setQuestionCount] = useState<number>(0);
 
   const currentRoomCode = params.roomCode as string;
 
@@ -38,25 +43,49 @@ export default function LobbyPage() {
     if (!socket) return;
 
     // Listen for successful join
-    socket.on("player_joined_success", (data: { status: string }) => {
-      console.log("Successfully joined room:", data);
+    socket.on("player_joined_success", (data: { 
+      status: string;
+      quizTitle?: string;
+      questionCount?: number;
+    }) => {
+      console.log("✅ Successfully joined room:", data);
       setHasJoined(true);
       setIsJoining(false);
       setPlayerName(localNickname);
+      
+      // Store quiz metadata (backend updated payload)
+      if (data.quizTitle) setQuizTitle(data.quizTitle);
+      if (data.questionCount) setQuestionCount(data.questionCount);
+      
       toast.success("Berhasil bergabung ke room!");
     });
 
-    // Listen for game start
-    socket.on("game_started", () => {
-      console.log("Game is starting...");
+    // Listen for game start (sesuai PRD_BACKEND.md: event name = "game:started")
+    const handleGameStart = (data?: any) => {
+      console.log("🎮 Game is starting...", data);
       setGameState("PLAYING");
       router.push(`/play/${currentRoomCode}/live`);
-    });
+      toast.success("Game dimulai!");
+    };
+
+    socket.on("game:started", handleGameStart); // Event name dari PRD
+    socket.on("game_started", handleGameStart); // Fallback untuk compatibility
+    socket.on("start_game", handleGameStart); // Alternative
 
     // Listen for errors
     socket.on("error_message", (data: { msg: string }) => {
+      console.error("❌ Socket error:", data.msg);
       toast.error(data.msg);
       setIsJoining(false);
+
+      // Handle specific errors
+      if (data.msg === "Host disconnected") {
+        toast.error("Host terputus. Game berakhir.");
+        setTimeout(() => {
+          router.push("/");
+        }, 5000);
+        return;
+      }
 
       // If room not found, redirect back
       if (
@@ -69,10 +98,18 @@ export default function LobbyPage() {
       }
     });
 
+    // Debug: listen to all events
+    socket.onAny((eventName, ...args) => {
+      console.log(`📡 Socket event received: ${eventName}`, args);
+    });
+
     return () => {
       socket.off("player_joined_success");
-      socket.off("game_started");
+      socket.off("game:started", handleGameStart);
+      socket.off("game_started", handleGameStart);
+      socket.off("start_game", handleGameStart);
       socket.off("error_message");
+      socket.offAny();
     };
   }, [
     socket,
@@ -174,6 +211,17 @@ export default function LobbyPage() {
             Room Code:{" "}
             <span className="font-bold text-xl">{currentRoomCode}</span>
           </CardDescription>
+          {quizTitle && (
+            <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
+              <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Quiz:</p>
+              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{quizTitle}</p>
+              {questionCount > 0 && (
+                <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+                  {questionCount} pertanyaan
+                </p>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Player Info */}

@@ -1,13 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,7 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 import type { Quiz } from "@/types";
 
@@ -42,7 +36,7 @@ interface QuizCardProps {
 export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
   const router = useRouter();
   const { socket } = useSocket();
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const gradient = gradients[index % gradients.length];
 
   const handleCreateRoom = async () => {

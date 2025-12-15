@@ -1,168 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSocket } from "@/contexts/SocketContext";
-import { useGame } from "@/contexts/GameContext";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Trophy, CheckCircle, XCircle } from "lucide-react";
-import Image from "next/image";
+import { useGameStore } from "@/stores/game-store";
+import { QuestionDisplay } from "@/components/game/QuestionDisplay";
+import { GameTimer } from "@/components/game/GameTimer";
+import { AnswerGrid } from "@/components/game/AnswerGrid";
+import { FeedbackModal } from "@/components/game/FeedbackModal";
+import { LeaderboardOverlay } from "@/components/game/LeaderboardOverlay";
+import { ReconnectingOverlay } from "@/components/game/ReconnectingOverlay";
 import { toast } from "sonner";
-import type {
-  QuestionStartPayload,
-  AnswerResultPayload,
-  UpdateLeaderboardPayload,
-} from "@/types";
-
-const ANSWER_COLORS = [
-  {
-    bg: "bg-red-500 hover:bg-red-600",
-    text: "text-white",
-    border: "border-red-600",
-  },
-  {
-    bg: "bg-blue-500 hover:bg-blue-600",
-    text: "text-white",
-    border: "border-blue-600",
-  },
-  {
-    bg: "bg-yellow-500 hover:bg-yellow-600",
-    text: "text-white",
-    border: "border-yellow-600",
-  },
-  {
-    bg: "bg-green-500 hover:bg-green-600",
-    text: "text-white",
-    border: "border-green-600",
-  },
-];
-
-const ANSWER_LABELS = ["A", "B", "C", "D"];
 
 export default function GameArenaPage() {
   const params = useParams();
   const router = useRouter();
-  const { socket } = useSocket();
-  const {
-    currentQuestion,
-    setCurrentQuestion,
-    playerName,
-    playerScore,
-    setPlayerScore,
-    selectedAnswer,
-    setSelectedAnswer,
-    hasAnswered,
-    setHasAnswered,
-    isCorrect,
-    setIsCorrect,
-    scoreEarned,
-    setScoreEarned,
-    leaderboard,
-    setLeaderboard,
-    setPlayerRank,
-  } = useGame();
+  const { socket, isConnected } = useSocket();
+  
+  // Zustand store
+  const gameState = useGameStore((state) => state.gameState);
+  const setGameState = useGameStore((state) => state.setGameState);
+  const currentQuestion = useGameStore((state) => state.currentQuestion);
+  const setCurrentQuestion = useGameStore((state) => state.setCurrentQuestion);
+  const playerName = useGameStore((state) => state.playerName);
+  const score = useGameStore((state) => state.score);
+  const setScore = useGameStore((state) => state.setScore);
+  const selectedAnswer = useGameStore((state) => state.selectedAnswer);
+  const setSelectedAnswer = useGameStore((state) => state.setSelectedAnswer);
+  const answerResult = useGameStore((state) => state.answerResult);
+  const setAnswerResult = useGameStore((state) => state.setAnswerResult);
+  const leaderboard = useGameStore((state) => state.leaderboard);
+  const setLeaderboard = useGameStore((state) => state.setLeaderboard);
+  const totalQuestions = useGameStore((state) => state.totalQuestions);
+  const setTotalQuestions = useGameStore((state) => state.setTotalQuestions);
 
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [answerStartTime, setAnswerStartTime] = useState<number>(0);
   const roomCode = params.roomCode as string;
+  const answerStartTime = useRef<number>(0);
+  const [quizId, setQuizId] = useState<string | null>(null);
 
-  // Timer countdown
-  useEffect(() => {
-    if (!currentQuestion || hasAnswered) return;
-
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [currentQuestion, hasAnswered]);
-
-  // Socket event listeners
+  // Game started event - track metadata (backend now sends quizId)
   useEffect(() => {
     if (!socket) return;
 
-    // Question starts
-    socket.on("question_start", (data: QuestionStartPayload) => {
-      console.log("Question started:", data);
+    socket.on("game:started", (data: { questionCount: number; quizId?: string }) => {
+      console.log("🎮 Game started:", data);
+      setTotalQuestions(data.questionCount || 0);
+      
+      // Backend now includes quizId (per BACKEND_CHANGES_SUMMARY.md)
+      if (data.quizId) {
+        setQuizId(data.quizId);
+        console.log("✅ Quiz ID received:", data.quizId);
+      }
+      
+      // Note: Questions delivered via question_start events (socket-based approach)
+    });
+
+    return () => {
+      socket.off("game:started");
+    };
+  }, [socket, setTotalQuestions]);
+
+  // Socket event listeners for game flow
+  useEffect(() => {
+    if (!socket) return;
+
+    // Question starts (backend sends full question data via socket)
+    socket.on("question_start", (data: any) => {
+      console.log("📝 Question started:", data);
+      
       setCurrentQuestion({
         qIndex: data.qIndex,
         qText: data.qText,
         imageUrl: data.imageUrl,
         options: data.options,
         duration: data.duration,
-        points: data.points,
+        points: data.points || 20,
       });
-      setTimeLeft(data.duration);
+      
       setSelectedAnswer(null);
-      setHasAnswered(false);
-      setIsCorrect(null);
-      setShowFeedback(false);
-      setShowLeaderboard(false);
-      setAnswerStartTime(Date.now());
+      setAnswerResult(null);
+      setGameState("PLAYING");
+      answerStartTime.current = Date.now();
     });
 
-    // Answer result (private)
-    socket.on("answer_result", (data: AnswerResultPayload) => {
+    // Answer result (private feedback)
+    socket.on("answer_result", (data: any) => {
       console.log("Answer result:", data);
-      setIsCorrect(data.isCorrect);
-      setScoreEarned(data.scoreEarned);
-      setPlayerScore(data.currentTotal);
-      setShowFeedback(true);
+      setAnswerResult({
+        isCorrect: data.isCorrect,
+        scoreEarned: data.scoreEarned,
+        currentTotal: data.currentTotal,
+        correctAnswerIdx: data.correctAnswerIdx,
+      });
+      setScore(data.currentTotal);
+      setGameState("FEEDBACK");
     });
 
-    // Question end
-    socket.on("question_end", (data: { correctAnswerIdx: number }) => {
-      console.log("Question ended. Correct answer:", data.correctAnswerIdx);
-      // Show correct answer
-      setTimeout(() => {
-        setShowFeedback(false);
-      }, 2000);
+    // Question ends (time up) - sync with server timer
+    socket.on("question_end", (data: any) => {
+      console.log("⏱️ Question ended (server):", data);
+      
+      // Force stop timer and disable answers (server says time is up)
+      if (!answerResult) {
+        setAnswerResult({
+          isCorrect: false,
+          scoreEarned: 0,
+          currentTotal: score,
+          correctAnswerIdx: data.correctAnswerIdx,
+        });
+        setGameState("FEEDBACK");
+      }
     });
 
     // Leaderboard update
-    socket.on("update_leaderboard", (data: UpdateLeaderboardPayload) => {
+    socket.on("update_leaderboard", (data: any) => {
       console.log("Leaderboard updated:", data);
-      setLeaderboard(data.leaderboard);
-
-      // Find player rank
-      const playerIndex = data.leaderboard.findIndex(
-        (p) => p.name === playerName
-      );
-      if (playerIndex !== -1) {
-        setPlayerRank(playerIndex + 1);
-      }
-
-      setShowLeaderboard(true);
-
-      // Hide leaderboard after 5 seconds
+      const leaderboardData = data.leaderboard || data;
+      setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : []);
+      
+      // Show leaderboard after short delay
       setTimeout(() => {
-        setShowLeaderboard(false);
-      }, 5000);
+        setGameState("LEADERBOARD");
+      }, 2000);
     });
 
-    // Game over
-    socket.on("game_over", () => {
-      console.log("Game ended");
-      toast.success("Game selesai!");
-      setTimeout(() => {
-        router.push("/");
-      }, 3000);
+    // Game over (PRD: game:ended event)
+    socket.on("game:ended", (data: any) => {
+      console.log("🏁 Game ended:", data);
+      setLeaderboard(data.finalLeaderboard || []);
+      setGameState("RESULT");
+    });
+
+    // Fallback untuk final_results (compatibility)
+    socket.on("final_results", (data: any) => {
+      console.log("🏁 Final results:", data);
+      setLeaderboard(data.top3 || data.leaderboard || []);
+      setGameState("RESULT");
+    });
+
+    // Error handling
+    socket.on("error_message", (data: { msg: string }) => {
+      console.error("❌ Socket error:", data.msg);
+      toast.error(data.msg);
+    });
+
+    // Debug: log all events
+    socket.onAny((eventName, ...args) => {
+      console.log(`📡 [Game Arena] Event: ${eventName}`, args);
     });
 
     return () => {
@@ -170,208 +154,148 @@ export default function GameArenaPage() {
       socket.off("answer_result");
       socket.off("question_end");
       socket.off("update_leaderboard");
-      socket.off("game_over");
+      socket.off("game:ended");
+      socket.off("final_results");
+      socket.off("error_message");
+      socket.offAny();
     };
-  }, [
-    socket,
-    playerName,
-    router,
-    setCurrentQuestion,
-    setPlayerScore,
-    setIsCorrect,
-    setScoreEarned,
-    setLeaderboard,
-    setPlayerRank,
-    setSelectedAnswer,
-    setHasAnswered,
-  ]);
+  }, [socket, setGameState, setCurrentQuestion, setAnswerResult, setLeaderboard, setSelectedAnswer, setScore, answerResult, score]);
 
-  const handleSelectAnswer = (answerIdx: number) => {
-    if (hasAnswered || !currentQuestion) return;
+  // Submit answer
+  const submitAnswer = useCallback(
+    (answerIdx: number) => {
+      if (!socket || selectedAnswer !== null) return;
 
-    setSelectedAnswer(answerIdx);
-    setHasAnswered(true);
+      const timeElapsed = (Date.now() - answerStartTime.current) / 1000;
+      setSelectedAnswer(answerIdx);
+      
+      socket.emit("submit_answer", {
+        roomCode,
+        answerIdx,
+        timeElapsed,
+        clientTimestamp: Date.now(),
+      });
+    },
+    [socket, roomCode, selectedAnswer, setSelectedAnswer]
+  );
 
-    const now = Date.now();
-    const timeElapsed = (now - answerStartTime) / 1000;
+  // Handle time up
+  const handleTimeUp = useCallback(() => {
+    if (selectedAnswer === null && gameState === "PLAYING") {
+      toast.warning("Waktu habis!");
+    }
+  }, [selectedAnswer, gameState]);
 
-    // Emit answer to server
-    socket?.emit("submit_answer", {
-      roomCode,
-      answerIdx,
-      timeElapsed,
-      clientTimestamp: now,
-    });
-  };
+  // Rejoin room on reconnect
+  useEffect(() => {
+    if (isConnected && roomCode && playerName && gameState === "LOBBY") {
+      socket?.emit("rejoin_room", { roomCode, nickname: playerName });
+    }
+  }, [isConnected, roomCode, playerName, gameState, socket]);
 
-  const renderLeaderboardTop5 = () => {
-    const top5 = leaderboard.slice(0, 5);
-    const playerIndex = leaderboard.findIndex((p) => p.name === playerName);
-    const playerRank = playerIndex + 1;
+  // Render based on game state
+  if (!isConnected) {
+    return <ReconnectingOverlay />;
+  }
 
+  if (!currentQuestion && gameState === "PLAYING") {
     return (
-      <div className="space-y-2">
-        {top5.map((player, idx) => (
-          <div
-            key={idx}
-            className={`flex items-center justify-between p-3 rounded-lg ${
-              player.name === playerName
-                ? "bg-primary/20 border-2 border-primary"
-                : "bg-gray-100 dark:bg-gray-800"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                  idx === 0
-                    ? "bg-yellow-400 text-yellow-900"
-                    : idx === 1
-                    ? "bg-gray-300 text-gray-900"
-                    : idx === 2
-                    ? "bg-orange-400 text-orange-900"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                {idx + 1}
-              </div>
-              <span className="font-semibold">{player.name}</span>
-            </div>
-            <span className="font-bold">{player.score} pts</span>
-          </div>
-        ))}
-
-        {/* Show current player if not in top 5 */}
-        {playerRank > 5 && (
-          <>
-            <div className="text-center text-muted-foreground py-2">...</div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/20 border-2 border-primary">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold bg-gray-200 text-gray-700">
-                  {playerRank}
-                </div>
-                <span className="font-semibold">{playerName}</span>
-              </div>
-              <span className="font-bold">
-                {leaderboard[playerIndex].score} pts
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
-  if (!currentQuestion) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-600 to-blue-600">
-        <Card className="p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">
-            Menunggu soal berikutnya...
-          </h2>
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-48 mx-auto"></div>
-          </div>
-        </Card>
+      <div className="min-h-screen game-gradient flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-xl font-semibold">Menunggu soal...</p>
+        </div>
       </div>
     );
   }
 
-  const progressPercentage = (timeLeft / currentQuestion.duration) * 100;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-red-600 p-4">
-      <div className="max-w-4xl mx-auto py-4">
-        {/* Header - Question Info */}
-        <div className="mb-6 bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">
-              Question {currentQuestion.qIndex}
-            </span>
-            <span className="text-sm font-medium">
-              {playerName} - {playerScore} pts
-            </span>
+    <div className="min-h-screen game-gradient flex flex-col">
+      {/* Main Game Content */}
+      {gameState === "PLAYING" && currentQuestion && (
+        <>
+          {/* Timer */}
+          <GameTimer
+            duration={currentQuestion.duration}
+            onTimeUp={handleTimeUp}
+            isPaused={selectedAnswer !== null}
+          />
+
+          {/* Question */}
+          <QuestionDisplay
+            questionIndex={currentQuestion.qIndex + 1}
+            totalQuestions={totalQuestions}
+            questionText={currentQuestion.qText}
+            imageUrl={currentQuestion.imageUrl}
+            points={currentQuestion.points}
+          />
+
+          {/* Answer Grid */}
+          <div className="flex-1 flex items-end">
+            <AnswerGrid
+              options={currentQuestion.options}
+              selectedAnswer={selectedAnswer}
+              onSelect={submitAnswer}
+              disabled={selectedAnswer !== null}
+            />
           </div>
-          <Progress value={progressPercentage} className="h-3" />
-          <div className="text-center mt-2 text-2xl font-bold">{timeLeft}s</div>
-        </div>
-
-        {/* Question Card */}
-        <Card className="mb-6 p-6">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-            {currentQuestion.qText}
-          </h2>
-
-          {currentQuestion.imageUrl && (
-            <div className="relative w-full h-64 mb-4 rounded-lg overflow-hidden">
-              <Image
-                src={currentQuestion.imageUrl}
-                alt="Question image"
-                fill
-                className="object-contain"
-              />
-            </div>
-          )}
-        </Card>
-
-        {/* Answer Options - Grid 2x2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentQuestion.options.map((option, idx) => (
-            <Button
-              key={idx}
-              onClick={() => handleSelectAnswer(idx)}
-              disabled={hasAnswered}
-              className={`h-24 md:h-32 text-lg md:text-xl font-bold transition-all ${
-                ANSWER_COLORS[idx].bg
-              } ${selectedAnswer === idx ? "ring-4 ring-white scale-105" : ""}`}
-            >
-              <span className="mr-2">{ANSWER_LABELS[idx]}.</span>
-              {option}
-            </Button>
-          ))}
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Feedback Modal */}
-      <Dialog open={showFeedback} onOpenChange={setShowFeedback}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center">
-              {isCorrect ? (
-                <div className="flex flex-col items-center gap-2 text-green-600">
-                  <CheckCircle className="h-16 w-16" />
-                  <span className="text-2xl">Benar!</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-red-600">
-                  <XCircle className="h-16 w-16" />
-                  <span className="text-2xl">Salah!</span>
-                </div>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center space-y-2">
-            <p className="text-3xl font-bold">
-              {isCorrect ? `+${scoreEarned}` : "+0"} pts
-            </p>
-            <p className="text-muted-foreground">
-              Total Skor: {playerScore} pts
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {gameState === "FEEDBACK" && answerResult && (
+        <FeedbackModal
+          isCorrect={answerResult.isCorrect}
+          scoreEarned={answerResult.scoreEarned}
+          currentTotal={answerResult.currentTotal}
+        />
+      )}
 
-      {/* Leaderboard Modal */}
-      <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-center flex items-center justify-center gap-2">
-              <Trophy className="h-6 w-6 text-yellow-500" />
-              <span className="text-2xl">Leaderboard</span>
-            </DialogTitle>
-          </DialogHeader>
-          {renderLeaderboardTop5()}
-        </DialogContent>
-      </Dialog>
+      {/* Leaderboard Overlay */}
+      {gameState === "LEADERBOARD" && (
+        <LeaderboardOverlay
+          leaderboard={leaderboard}
+          currentUserName={playerName}
+        />
+      )}
+
+      {/* Final Results */}
+      {gameState === "RESULT" && (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-3xl p-8 text-center">
+            <h1 className="text-4xl font-bold text-white mb-6">Game Selesai!</h1>
+            <div className="mb-8">
+              <p className="text-white/80 text-lg mb-2">Skor Akhir Kamu:</p>
+              <p className="text-6xl font-bold text-white">{score} pt</p>
+            </div>
+            
+            {leaderboard.length > 0 && (
+              <div className="space-y-3 mb-8">
+                <h3 className="text-xl font-semibold text-white mb-4">Top 3 Players</h3>
+                {leaderboard.slice(0, 3).map((player, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-white/10 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</span>
+                      <span className="text-white font-semibold">{player.name}</span>
+                    </div>
+                    <span className="text-white font-bold">{player.score} pt</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => router.push("/")}
+              className="w-full py-4 bg-white text-purple-600 rounded-xl font-bold text-lg hover:bg-white/90 transition-all"
+            >
+              Kembali ke Home
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

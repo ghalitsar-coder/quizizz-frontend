@@ -95,22 +95,41 @@ export default function HostRoomPage() {
       }
     );
 
-    // Listen for game over
+    // Listen for game over (PRD: game:ended event)
+    socket.on(
+      "game:ended",
+      (data: { finalLeaderboard: LeaderboardEntry[] }) => {
+        console.log("🏁 Game ended:", data);
+        const winner = data.finalLeaderboard[0]?.name || "Unknown";
+        toast.success(`Game selesai! Pemenang: ${winner}`);
+        setLeaderboard(data.finalLeaderboard);
+        setGameStatus("ENDED");
+      }
+    );
+
+    // Fallback untuk final_results (compatibility)
     socket.on(
       "final_results",
       (data: { winner: string; top3: LeaderboardEntry[] }) => {
-        console.log("Game ended:", data);
+        console.log("🏁 Final results:", data);
         toast.success(`Game selesai! Pemenang: ${data.winner}`);
         setGameStatus("ENDED");
       }
     );
+
+    // Debug: log all events
+    socket.onAny((eventName, ...args) => {
+      console.log(`📡 [Host] Event: ${eventName}`, args);
+    });
 
     return () => {
       socket.off("player_joined");
       socket.off("question_start");
       socket.off("live_stats");
       socket.off("update_leaderboard");
+      socket.off("game:ended");
       socket.off("final_results");
+      socket.offAny();
     };
   }, [socket, isConnected]);
 
@@ -130,9 +149,14 @@ export default function HostRoomPage() {
   };
 
   const handleNextQuestion = () => {
-    if (!socket) return;
+    if (!socket) {
+      toast.error("Tidak terhubung ke server");
+      return;
+    }
 
-    socket.emit("next_question", { roomCode });
+    console.log("➡️ Emitting game:next for room:", roomCode);
+    socket.emit("game:next", { roomCode });
+    toast.info("Loading next question...");
   };
 
   const handleEndGame = () => {
@@ -140,9 +164,13 @@ export default function HostRoomPage() {
       return;
     }
 
-    if (!socket) return;
+    if (!socket) {
+      toast.error("Tidak terhubung ke server");
+      return;
+    }
 
-    socket.emit("game_over", { roomCode });
+    console.log("🛑 Emitting game:end for room:", roomCode);
+    socket.emit("game:end", { roomCode });
     toast.success("Game diakhiri");
 
     setTimeout(() => {

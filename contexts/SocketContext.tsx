@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
@@ -13,14 +14,11 @@ import { toast } from "sonner";
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
-  reconnecting: boolean;
+  isReconnecting: boolean;
+  emit: (event: string, data: unknown) => void;
 }
 
-const SocketContext = createContext<SocketContextType>({
-  socket: null,
-  isConnected: false,
-  reconnecting: false,
-});
+const SocketContext = createContext<SocketContextType | null>(null);
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
@@ -37,7 +35,7 @@ interface SocketProviderProps {
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnecting, setReconnecting] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   useEffect(() => {
     const socketUrl =
@@ -49,13 +47,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
       transports: ["websocket", "polling"],
+      autoConnect: true,
     });
 
     // Connection events
     socketInstance.on("connect", () => {
       console.log("Connected to socket server with ID:", socketInstance.id);
       setIsConnected(true);
-      setReconnecting(false);
+      setIsReconnecting(false);
       toast.success("Terhubung ke server");
     });
 
@@ -67,19 +66,23 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     socketInstance.on("connect_error", (error) => {
       console.error("Connection error:", error);
-      setReconnecting(true);
-      toast.error("Mencoba menghubungkan kembali...");
+      setIsReconnecting(true);
+    });
+
+    socketInstance.on("reconnecting", () => {
+      console.log("Socket reconnecting...");
+      setIsReconnecting(true);
     });
 
     socketInstance.on("reconnect", (attemptNumber) => {
       console.log("Reconnected after", attemptNumber, "attempts");
-      setReconnecting(false);
+      setIsReconnecting(false);
       toast.success("Berhasil terhubung kembali");
     });
 
     socketInstance.on("reconnect_failed", () => {
       console.error("Reconnection failed");
-      setReconnecting(false);
+      setIsReconnecting(false);
       toast.error("Gagal menghubungkan ke server");
     });
 
@@ -99,8 +102,20 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     };
   }, []);
 
+  // Emit helper function
+  const emit = useCallback(
+    (event: string, data: unknown) => {
+      if (socket && isConnected) {
+        socket.emit(event, data);
+      } else {
+        console.warn("Socket not connected, cannot emit:", event);
+      }
+    },
+    [socket, isConnected]
+  );
+
   return (
-    <SocketContext.Provider value={{ socket, isConnected, reconnecting }}>
+    <SocketContext.Provider value={{ socket, isConnected, isReconnecting, emit }}>
       {children}
     </SocketContext.Provider>
   );
