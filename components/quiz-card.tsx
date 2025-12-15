@@ -1,22 +1,36 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Calendar, BookOpen, Edit, Trash2, Users, Clock } from 'lucide-react';
-import { useSocket } from '@/contexts/SocketContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import type { Quiz } from '@/types';
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  PlayCircle,
+  Calendar,
+  BookOpen,
+  Edit,
+  Trash2,
+  Users,
+  Clock,
+} from "lucide-react";
+import { useSocket } from "@/contexts/SocketContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import type { Quiz } from "@/types";
 
 const gradients = [
-  'from-purple-500 via-pink-500 to-red-500',
-  'from-blue-500 via-cyan-500 to-teal-500',
-  'from-orange-500 via-amber-500 to-yellow-500',
-  'from-green-500 via-emerald-500 to-cyan-500',
-  'from-indigo-500 via-purple-500 to-pink-500',
-  'from-rose-500 via-fuchsia-500 to-violet-500',
+  "from-purple-500 via-pink-500 to-red-500",
+  "from-blue-500 via-cyan-500 to-teal-500",
+  "from-orange-500 via-amber-500 to-yellow-500",
+  "from-green-500 via-emerald-500 to-cyan-500",
+  "from-indigo-500 via-purple-500 to-pink-500",
+  "from-rose-500 via-fuchsia-500 to-violet-500",
 ];
 
 interface QuizCardProps {
@@ -33,24 +47,31 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
 
   const handleCreateRoom = async () => {
     if (!socket) {
-      toast.error('Tidak terhubung ke server');
+      toast.error("Tidak terhubung ke server");
       return;
     }
 
     if (!user?.id) {
-      toast.error('User tidak ditemukan. Silakan login ulang.');
+      toast.error("User tidak ditemukan. Silakan login ulang.");
       return;
     }
 
-    socket.emit('create_room', {
+    socket.emit("create_room", {
       quizId: quiz.id,
-      userId: user.id
+      userId: user.id,
     });
 
-    socket.once('room_created', (data: { roomCode: string; quizTitle?: string; questionCount?: number }) => {
-      toast.success(`Room berhasil dibuat! Kode: ${data.roomCode}`);
-      router.push(`/host/${data.roomCode}`);
-    });
+    socket.once(
+      "room_created",
+      (data: {
+        roomCode: string;
+        quizTitle?: string;
+        questionCount?: number;
+      }) => {
+        toast.success(`Room berhasil dibuat! Kode: ${data.roomCode}`);
+        router.push(`/host/${data.roomCode}`);
+      }
+    );
   };
 
   const handleEdit = () => {
@@ -58,7 +79,7 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
   };
 
   const handleDelete = () => {
-    if (confirm('Apakah Anda yakin ingin menghapus quiz ini?')) {
+    if (confirm("Apakah Anda yakin ingin menghapus quiz ini?")) {
       onDelete(quiz.id);
     }
   };
@@ -66,7 +87,9 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
   return (
     <Card className="group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
       {/* Colorful Header */}
-      <div className={`h-32 bg-gradient-to-br ${gradient} relative overflow-hidden`}>
+      <div
+        className={`h-32 bg-gradient-to-br ${gradient} relative overflow-hidden`}
+      >
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="absolute top-3 right-3 flex gap-2">
           <Button
@@ -99,14 +122,16 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <BookOpen className="h-4 w-4 text-blue-500" />
-            <span className="font-medium">{quiz.questions?.length || 0} Soal</span>
+            <span className="font-medium">
+              {quiz.questions?.length || 0} Soal
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4 text-green-500" />
             <span className="font-medium">
-              {new Date(quiz.createdAt).toLocaleDateString('id-ID', { 
-                day: 'numeric', 
-                month: 'short' 
+              {new Date(quiz.createdAt).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "short",
               })}
             </span>
           </div>
@@ -115,8 +140,8 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
         {/* Additional Info */}
         <div className="flex gap-2">
           <Badge variant="secondary" className="text-xs">
-            <Clock className="h-3 w-3 mr-1" />
-            ~{(quiz.questions?.length || 0) * 15}s
+            <Clock className="h-3 w-3 mr-1" />~
+            {(quiz.questions?.length || 0) * 15}s
           </Badge>
           <Badge variant="secondary" className="text-xs">
             <Users className="h-3 w-3 mr-1" />
@@ -125,7 +150,7 @@ export function QuizCard({ quiz, index, onDelete }: QuizCardProps) {
         </div>
 
         {/* Action Button */}
-        <Button 
+        <Button
           onClick={handleCreateRoom}
           className={`w-full bg-gradient-to-r ${gradient} hover:opacity-90 text-white font-semibold shadow-md`}
           size="lg"

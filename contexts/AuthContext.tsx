@@ -1,7 +1,13 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'sonner';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -22,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
@@ -33,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load user from localStorage on mount (only user data, not token)
   useEffect(() => {
-    const storedUser = localStorage.getItem('auth_user');
-    
+    const storedUser = localStorage.getItem("auth_user");
+
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -43,53 +49,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include', // Important: include cookies
+        credentials: "include", // Important: include cookies
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Login failed');
+        throw new Error(error.message || "Login failed");
       }
 
       const data = await response.json();
-      
+
       // Only store user data, token is in httpOnly cookie
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      
+      localStorage.setItem("auth_user", JSON.stringify(data.user));
+
       setUser(data.user);
-      
-      toast.success('Login berhasil!');
+
+      toast.success("Login berhasil!");
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error((error as Error).message || 'Login gagal');
+      console.error("Login error:", error);
+      toast.error((error as Error).message || "Login gagal");
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
       // Call logout endpoint to clear cookie on server
       await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
       });
-      
-      localStorage.removeItem('auth_user');
+
+      localStorage.removeItem("auth_user");
       setUser(null);
-      toast.success('Logout berhasil');
+      toast.success("Logout berhasil");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       // Clear local state anyway
-      localStorage.removeItem('auth_user');
+      localStorage.removeItem("auth_user");
       setUser(null);
     }
   };

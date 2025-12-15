@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { toast } from 'sonner';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -19,7 +25,7 @@ const SocketContext = createContext<SocketContextType>({
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {
-    throw new Error('useSocket must be used within SocketProvider');
+    throw new Error("useSocket must be used within SocketProvider");
   }
   return context;
 };
@@ -34,50 +40,51 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
-    
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+
     const socketInstance = io(socketUrl, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
     });
 
     // Connection events
-    socketInstance.on('connect', () => {
-      console.log('Connected to socket server with ID:', socketInstance.id);
+    socketInstance.on("connect", () => {
+      console.log("Connected to socket server with ID:", socketInstance.id);
       setIsConnected(true);
       setReconnecting(false);
-      toast.success('Terhubung ke server');
+      toast.success("Terhubung ke server");
     });
 
-    socketInstance.on('disconnect', (reason) => {
-      console.log('Disconnected from socket server:', reason);
+    socketInstance.on("disconnect", (reason) => {
+      console.log("Disconnected from socket server:", reason);
       setIsConnected(false);
-      toast.error('Koneksi terputus');
+      toast.error("Koneksi terputus");
     });
 
-    socketInstance.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+    socketInstance.on("connect_error", (error) => {
+      console.error("Connection error:", error);
       setReconnecting(true);
-      toast.error('Mencoba menghubungkan kembali...');
+      toast.error("Mencoba menghubungkan kembali...");
     });
 
-    socketInstance.on('reconnect', (attemptNumber) => {
-      console.log('Reconnected after', attemptNumber, 'attempts');
+    socketInstance.on("reconnect", (attemptNumber) => {
+      console.log("Reconnected after", attemptNumber, "attempts");
       setReconnecting(false);
-      toast.success('Berhasil terhubung kembali');
+      toast.success("Berhasil terhubung kembali");
     });
 
-    socketInstance.on('reconnect_failed', () => {
-      console.error('Reconnection failed');
+    socketInstance.on("reconnect_failed", () => {
+      console.error("Reconnection failed");
       setReconnecting(false);
-      toast.error('Gagal menghubungkan ke server');
+      toast.error("Gagal menghubungkan ke server");
     });
 
     // Error handling from server
-    socketInstance.on('error_message', (data: { msg: string }) => {
+    socketInstance.on("error_message", (data: { msg: string }) => {
       toast.error(data.msg);
     });
 

@@ -19,7 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Quizizz Clone - Interactive Quiz Game",
-  description: "Join interactive quiz games or create your own quiz as a teacher",
+  description:
+    "Join interactive quiz games or create your own quiz as a teacher",
 };
 
 export default function RootLayout({

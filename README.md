@@ -15,28 +15,32 @@ Frontend aplikasi Quizizz Clone yang dibangun dengan Next.js, TypeScript, dan Ta
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm atau yarn
 
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Setup environment variables:
+
 ```bash
 cp .env.example .env.local
 ```
 
 Edit `.env.local` dan sesuaikan dengan konfigurasi backend Anda:
+
 ```
 NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 3. Run development server:
+
 ```bash
 npm run dev
 ```
@@ -72,6 +76,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Fitur Utama
 
 ### Untuk Siswa
+
 - ✅ Join game dengan kode room
 - ✅ Input nickname
 - ✅ Waiting room
@@ -80,6 +85,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - ✅ Leaderboard real-time
 
 ### Untuk Guru
+
 - ✅ Login/Authentication
 - ✅ Dashboard quiz management
 - ✅ Quiz creator dengan multiple questions
@@ -94,6 +100,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 Frontend mendengarkan event berikut dari backend:
 
 ### Student Events
+
 - `player_joined_success` - Konfirmasi join room
 - `game_started` - Game dimulai
 - `question_start` - Soal baru dimulai
@@ -102,13 +109,15 @@ Frontend mendengarkan event berikut dari backend:
 - `update_leaderboard` - Update klasemen
 - `game_over` - Game selesai
 
-### Teacher Events  
+### Teacher Events
+
 - `room_created` - Room berhasil dibuat
 - `player_joined` - Notifikasi siswa join
 - `live_stats` - Statistik jawaban real-time
 - `final_results` - Hasil akhir game
 
 Frontend mengirim event:
+
 - `join_room` - Siswa join
 - `submit_answer` - Kirim jawaban
 - `create_room` - Buat room (guru)
@@ -142,6 +151,7 @@ npm run lint
 ## Deployment
 
 1. Build aplikasi:
+
 ```bash
 npm run build
 ```

@@ -1,22 +1,28 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useSocket } from '@/contexts/SocketContext';
-import { useGame } from '@/contexts/GameContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Users } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useSocket } from "@/contexts/SocketContext";
+import { useGame } from "@/contexts/GameContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Loader2, Users } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LobbyPage() {
   const params = useParams();
   const router = useRouter();
   const { socket, isConnected } = useSocket();
   const { setRoomCode, playerName, setPlayerName, setGameState } = useGame();
-  
-  const [localNickname, setLocalNickname] = useState('');
+
+  const [localNickname, setLocalNickname] = useState("");
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -32,65 +38,75 @@ export default function LobbyPage() {
     if (!socket) return;
 
     // Listen for successful join
-    socket.on('player_joined_success', (data: { status: string }) => {
-      console.log('Successfully joined room:', data);
+    socket.on("player_joined_success", (data: { status: string }) => {
+      console.log("Successfully joined room:", data);
       setHasJoined(true);
       setIsJoining(false);
       setPlayerName(localNickname);
-      toast.success('Berhasil bergabung ke room!');
+      toast.success("Berhasil bergabung ke room!");
     });
 
     // Listen for game start
-    socket.on('game_started', () => {
-      console.log('Game is starting...');
-      setGameState('PLAYING');
+    socket.on("game_started", () => {
+      console.log("Game is starting...");
+      setGameState("PLAYING");
       router.push(`/play/${currentRoomCode}/live`);
     });
 
     // Listen for errors
-    socket.on('error_message', (data: { msg: string }) => {
+    socket.on("error_message", (data: { msg: string }) => {
       toast.error(data.msg);
       setIsJoining(false);
-      
+
       // If room not found, redirect back
-      if (data.msg.includes('tidak ditemukan') || data.msg.includes('not found')) {
+      if (
+        data.msg.includes("tidak ditemukan") ||
+        data.msg.includes("not found")
+      ) {
         setTimeout(() => {
-          router.push('/');
+          router.push("/");
         }, 2000);
       }
     });
 
     return () => {
-      socket.off('player_joined_success');
-      socket.off('game_started');
-      socket.off('error_message');
+      socket.off("player_joined_success");
+      socket.off("game_started");
+      socket.off("error_message");
     };
-  }, [socket, currentRoomCode, router, localNickname, setPlayerName, setGameState]);
+  }, [
+    socket,
+    currentRoomCode,
+    router,
+    localNickname,
+    setPlayerName,
+    setGameState,
+  ]);
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!localNickname.trim()) {
-      toast.error('Masukkan nickname Anda');
+      toast.error("Masukkan nickname Anda");
       return;
     }
 
     if (localNickname.length < 2 || localNickname.length > 20) {
-      toast.error('Nickname harus 2-20 karakter');
+      toast.error("Nickname harus 2-20 karakter");
       return;
     }
 
     if (!socket || !isConnected) {
-      toast.error('Belum terhubung ke server. Tunggu sebentar...');
+      toast.error("Belum terhubung ke server. Tunggu sebentar...");
       return;
     }
 
     setIsJoining(true);
 
     // Emit join_room event
-    socket.emit('join_room', {
+    socket.emit("join_room", {
       roomCode: currentRoomCode,
-      nickname: localNickname.trim()
+      nickname: localNickname.trim(),
     });
   };
 
@@ -102,7 +118,8 @@ export default function LobbyPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Join Game</CardTitle>
             <CardDescription>
-              Room Code: <span className="font-bold text-lg">{currentRoomCode}</span>
+              Room Code:{" "}
+              <span className="font-bold text-lg">{currentRoomCode}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,8 +137,8 @@ export default function LobbyPage() {
                   disabled={isJoining}
                 />
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full h-12 text-lg"
                 disabled={isJoining || !isConnected}
               >
@@ -131,7 +148,7 @@ export default function LobbyPage() {
                     Joining...
                   </>
                 ) : (
-                  'Join Room'
+                  "Join Room"
                 )}
               </Button>
 
@@ -154,7 +171,8 @@ export default function LobbyPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-3xl mb-2">Waiting for Host</CardTitle>
           <CardDescription className="text-base">
-            Room Code: <span className="font-bold text-xl">{currentRoomCode}</span>
+            Room Code:{" "}
+            <span className="font-bold text-xl">{currentRoomCode}</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

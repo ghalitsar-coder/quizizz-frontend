@@ -1,21 +1,25 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Plus, Sparkles, Package, Loader2 } from 'lucide-react';
-import { QuizCard } from '@/components/quiz-card';
-import { toast } from 'sonner';
-import { quizApi } from '@/lib/api';
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Plus, Sparkles, Package, Loader2 } from "lucide-react";
+import { QuizCard } from "@/components/quiz-card";
+import { toast } from "sonner";
+import { quizApi } from "@/lib/api";
 
 export function QuizPackages() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   // Fetch quizzes using TanStack Query
-  const { data: quizzes = [], isLoading, error } = useQuery({
-    queryKey: ['quizzes'],
+  const {
+    data: quizzes = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["quizzes"],
     queryFn: quizApi.getQuizzes,
   });
 
@@ -24,12 +28,12 @@ export function QuizPackages() {
     mutationFn: quizApi.deleteQuiz,
     onSuccess: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      toast.success('Quiz berhasil dihapus');
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+      toast.success("Quiz berhasil dihapus");
     },
     onError: (error) => {
-      console.error('Error deleting quiz:', error);
-      toast.error('Gagal menghapus quiz');
+      console.error("Error deleting quiz:", error);
+      toast.error("Gagal menghapus quiz");
     },
   });
 
@@ -42,9 +46,13 @@ export function QuizPackages() {
     return (
       <div className="px-4 lg:px-6">
         <Card className="p-8 text-center border-destructive">
-          <p className="text-destructive">Error loading quizzes: {(error as Error).message}</p>
-          <Button 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['quizzes'] })}
+          <p className="text-destructive">
+            Error loading quizzes: {(error as Error).message}
+          </p>
+          <Button
+            onClick={() =>
+              queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+            }
             variant="outline"
             className="mt-4"
           >
@@ -98,8 +106,8 @@ export function QuizPackages() {
             </p>
           </div>
         </div>
-        <Button 
-          onClick={() => router.push('/dashboard/create')}
+        <Button
+          onClick={() => router.push("/dashboard/create")}
           size="lg"
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg"
         >
@@ -119,8 +127,8 @@ export function QuizPackages() {
             <p className="text-muted-foreground max-w-md">
               Mulai dengan membuat quiz pertama Anda dan bagikan dengan siswa
             </p>
-            <Button 
-              onClick={() => router.push('/dashboard/create')}
+            <Button
+              onClick={() => router.push("/dashboard/create")}
               size="lg"
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white mt-2"
             >

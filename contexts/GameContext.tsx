@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
-type GameState = 'LOBBY' | 'PLAYING' | 'RESULT' | 'ENDED';
+type GameState = "LOBBY" | "PLAYING" | "RESULT" | "ENDED";
 
 interface QuestionData {
   qIndex: number;
@@ -65,7 +65,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export const useGame = () => {
   const context = useContext(GameContext);
   if (!context) {
-    throw new Error('useGame must be used within GameProvider');
+    throw new Error("useGame must be used within GameProvider");
   }
   return context;
 };
@@ -75,12 +75,14 @@ interface GameProviderProps {
 }
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
-  const [gameState, setGameState] = useState<GameState>('LOBBY');
-  const [roomCode, setRoomCode] = useState('');
-  const [playerName, setPlayerName] = useState('');
+  const [gameState, setGameState] = useState<GameState>("LOBBY");
+  const [roomCode, setRoomCode] = useState("");
+  const [playerName, setPlayerName] = useState("");
   const [playerScore, setPlayerScore] = useState(0);
   const [playerRank, setPlayerRank] = useState(0);
-  const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(
+    null
+  );
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -89,9 +91,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const resetGame = () => {
-    setGameState('LOBBY');
-    setRoomCode('');
-    setPlayerName('');
+    setGameState("LOBBY");
+    setRoomCode("");
+    setPlayerName("");
     setPlayerScore(0);
     setPlayerRank(0);
     setCurrentQuestion(null);

@@ -1,17 +1,28 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 interface QuestionForm {
   qText: string;
@@ -24,16 +35,16 @@ interface QuestionForm {
 
 export default function QuizCreatorPage() {
   const router = useRouter();
-  const [quizTitle, setQuizTitle] = useState('');
+  const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<QuestionForm[]>([
     {
-      qText: '',
-      imageUrl: '',
-      options: ['', '', '', ''],
+      qText: "",
+      imageUrl: "",
+      options: ["", "", "", ""],
       correctAnswerIdx: 0,
       duration: 15,
       points: 20,
-    }
+    },
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,31 +52,39 @@ export default function QuizCreatorPage() {
     setQuestions([
       ...questions,
       {
-        qText: '',
-        imageUrl: '',
-        options: ['', '', '', ''],
+        qText: "",
+        imageUrl: "",
+        options: ["", "", "", ""],
         correctAnswerIdx: 0,
         duration: 15,
         points: 20,
-      }
+      },
     ]);
   };
 
   const removeQuestion = (index: number) => {
     if (questions.length === 1) {
-      toast.error('Quiz harus memiliki minimal 1 soal');
+      toast.error("Quiz harus memiliki minimal 1 soal");
       return;
     }
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  const updateQuestion = (index: number, field: keyof QuestionForm, value: string | number) => {
+  const updateQuestion = (
+    index: number,
+    field: keyof QuestionForm,
+    value: string | number
+  ) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
   };
 
-  const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
+  const updateOption = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
     const updated = [...questions];
     updated[questionIndex].options[optionIndex] = value;
     setQuestions(updated);
@@ -73,13 +92,13 @@ export default function QuizCreatorPage() {
 
   const validateQuiz = (): boolean => {
     if (!quizTitle.trim()) {
-      toast.error('Judul quiz tidak boleh kosong');
+      toast.error("Judul quiz tidak boleh kosong");
       return false;
     }
 
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      
+
       if (!q.qText.trim()) {
         toast.error(`Soal ${i + 1}: Teks soal tidak boleh kosong`);
         return false;
@@ -87,7 +106,11 @@ export default function QuizCreatorPage() {
 
       for (let j = 0; j < 4; j++) {
         if (!q.options[j].trim()) {
-          toast.error(`Soal ${i + 1}: Opsi ${String.fromCharCode(65 + j)} tidak boleh kosong`);
+          toast.error(
+            `Soal ${i + 1}: Opsi ${String.fromCharCode(
+              65 + j
+            )} tidak boleh kosong`
+          );
           return false;
         }
       }
@@ -107,22 +130,22 @@ export default function QuizCreatorPage() {
         title: quizTitle,
         questions: questions.map((q, idx) => ({
           id: `q-${idx}`,
-          ...q
+          ...q,
         })),
-        userId: 'user1', // TODO: Get from auth
-        createdAt: new Date()
+        userId: "user1", // TODO: Get from auth
+        createdAt: new Date(),
       };
 
-      console.log('Saving quiz:', quizData);
-      
+      console.log("Saving quiz:", quizData);
+
       // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Quiz berhasil disimpan!');
-      router.push('/dashboard');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      toast.success("Quiz berhasil disimpan!");
+      router.push("/dashboard");
     } catch (error) {
-      console.error('Error saving quiz:', error);
-      toast.error('Gagal menyimpan quiz');
+      console.error("Error saving quiz:", error);
+      toast.error("Gagal menyimpan quiz");
     } finally {
       setIsSaving(false);
     }
@@ -147,7 +170,7 @@ export default function QuizCreatorPage() {
             </div>
             <Button onClick={handleSave} disabled={isSaving} size="lg">
               <Save className="mr-2 h-5 w-5" />
-              {isSaving ? 'Menyimpan...' : 'Simpan Quiz'}
+              {isSaving ? "Menyimpan..." : "Simpan Quiz"}
             </Button>
           </div>
         </div>
@@ -181,7 +204,9 @@ export default function QuizCreatorPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle>Soal {qIndex + 1}</CardTitle>
-                  <CardDescription>Isi pertanyaan dan opsi jawaban</CardDescription>
+                  <CardDescription>
+                    Isi pertanyaan dan opsi jawaban
+                  </CardDescription>
                 </div>
                 {questions.length > 1 && (
                   <Button
@@ -202,20 +227,26 @@ export default function QuizCreatorPage() {
                   id={`qText-${qIndex}`}
                   placeholder="Masukkan pertanyaan..."
                   value={question.qText}
-                  onChange={(e) => updateQuestion(qIndex, 'qText', e.target.value)}
+                  onChange={(e) =>
+                    updateQuestion(qIndex, "qText", e.target.value)
+                  }
                   rows={3}
                 />
               </div>
 
               {/* Image URL (Optional) */}
               <div className="space-y-2">
-                <Label htmlFor={`imageUrl-${qIndex}`}>URL Gambar (Opsional)</Label>
+                <Label htmlFor={`imageUrl-${qIndex}`}>
+                  URL Gambar (Opsional)
+                </Label>
                 <Input
                   id={`imageUrl-${qIndex}`}
                   type="url"
                   placeholder="https://example.com/image.jpg"
                   value={question.imageUrl}
-                  onChange={(e) => updateQuestion(qIndex, 'imageUrl', e.target.value)}
+                  onChange={(e) =>
+                    updateQuestion(qIndex, "imageUrl", e.target.value)
+                  }
                 />
               </div>
 
@@ -224,18 +255,28 @@ export default function QuizCreatorPage() {
                 <Label>Opsi Jawaban</Label>
                 <RadioGroup
                   value={question.correctAnswerIdx.toString()}
-                  onValueChange={(value) => updateQuestion(qIndex, 'correctAnswerIdx', parseInt(value))}
+                  onValueChange={(value) =>
+                    updateQuestion(qIndex, "correctAnswerIdx", parseInt(value))
+                  }
                 >
-                  {['A', 'B', 'C', 'D'].map((label, optIndex) => (
+                  {["A", "B", "C", "D"].map((label, optIndex) => (
                     <div key={optIndex} className="flex items-center gap-2">
-                      <RadioGroupItem value={optIndex.toString()} id={`q${qIndex}-opt${optIndex}`} />
-                      <Label htmlFor={`q${qIndex}-opt${optIndex}`} className="font-normal w-8">
+                      <RadioGroupItem
+                        value={optIndex.toString()}
+                        id={`q${qIndex}-opt${optIndex}`}
+                      />
+                      <Label
+                        htmlFor={`q${qIndex}-opt${optIndex}`}
+                        className="font-normal w-8"
+                      >
                         {label}
                       </Label>
                       <Input
                         placeholder={`Opsi ${label}`}
                         value={question.options[optIndex]}
-                        onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
+                        onChange={(e) =>
+                          updateOption(qIndex, optIndex, e.target.value)
+                        }
                         className="flex-1"
                       />
                     </div>
@@ -252,7 +293,9 @@ export default function QuizCreatorPage() {
                   <Label htmlFor={`duration-${qIndex}`}>Durasi (detik)</Label>
                   <Select
                     value={question.duration.toString()}
-                    onValueChange={(value) => updateQuestion(qIndex, 'duration', parseInt(value))}
+                    onValueChange={(value) =>
+                      updateQuestion(qIndex, "duration", parseInt(value))
+                    }
                   >
                     <SelectTrigger id={`duration-${qIndex}`}>
                       <SelectValue />
@@ -274,7 +317,13 @@ export default function QuizCreatorPage() {
                     type="number"
                     min="1"
                     value={question.points}
-                    onChange={(e) => updateQuestion(qIndex, 'points', parseInt(e.target.value) || 20)}
+                    onChange={(e) =>
+                      updateQuestion(
+                        qIndex,
+                        "points",
+                        parseInt(e.target.value) || 20
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -283,7 +332,11 @@ export default function QuizCreatorPage() {
         ))}
 
         {/* Add Question Button */}
-        <Button onClick={addQuestion} variant="outline" className="w-full h-16 text-lg">
+        <Button
+          onClick={addQuestion}
+          variant="outline"
+          className="w-full h-16 text-lg"
+        >
           <Plus className="mr-2 h-5 w-5" />
           Tambah Soal
         </Button>
