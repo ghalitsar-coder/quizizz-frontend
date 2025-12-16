@@ -117,9 +117,7 @@ export default function GameArenaPage() {
     // Question ends (time up) - sync with server timer
     socket.on("question_end", (data: any) => {
       const timestamp = new Date().toISOString();
-      console.log(
-        `\n========== EVENT: question_end [${timestamp}] ==========`
-      );
+      console.log(`\n========== EVENT: question_end [${timestamp}] ==========`);
       console.log("⏱️ Question ended (server)");
       console.log("Correct answer index:", data.correctAnswerIdx);
       console.log("Current question:", currentQuestion?.qIndex ?? "NONE");
@@ -156,14 +154,14 @@ export default function GameArenaPage() {
       );
       console.log("📊 Leaderboard data:", data);
       console.log("Current game state:", gameState);
-      
+
       const leaderboardData = data.leaderboard || data;
       console.log("Player count:", leaderboardData.length);
       if (leaderboardData.length > 0) {
         console.log("Top player:", leaderboardData[0]);
       }
       console.log("=================================================\n");
-      
+
       // Don't auto-show leaderboard - wait for explicit state transition
       // Backend should control when to show leaderboard via game flow
     });

@@ -8,6 +8,7 @@
 ## 🐛 Bug #1: Premature Events on Game Start
 
 ### Symptoms:
+
 1. Guru membuat room ✅
 2. Pemain join room ✅
 3. Guru mulai quiz ✅
@@ -16,9 +17,11 @@
 6. Event racing - multiple leaderboard dalam 0.5 detik
 
 ### Root Cause:
+
 Backend emit `question_end` dan `update_leaderboard` **sebelum** atau **bersamaan** dengan `question_start`
 
 ### Expected Flow:
+
 ```
 1. game:started → ✅
 2. question_start (soal 1) → ✅
@@ -30,6 +33,7 @@ Backend emit `question_end` dan `update_leaderboard` **sebelum** atau **bersamaa
 ```
 
 ### Actual Flow (BUG):
+
 ```
 1. game:started → ✅
 2. question_end (???) → ❌ TOO EARLY
@@ -39,20 +43,24 @@ Backend emit `question_end` dan `update_leaderboard` **sebelum** atau **bersamaa
 ```
 
 ### Backend Investigation Needed:
+
 1. **Check `start_game` handler:**
+
    - Does it emit `question_end` immediately?
    - Does it emit `update_leaderboard` before first question?
 
 2. **Check `question_start` timing:**
+
    - Is there a delay before first question?
    - Are events queued properly?
 
 3. **Check event order:**
+
    ```javascript
    // ❌ WRONG ORDER
    io.to(roomCode).emit("update_leaderboard", ...);
    io.to(roomCode).emit("question_start", ...);
-   
+
    // ✅ CORRECT ORDER
    io.to(roomCode).emit("question_start", ...);
    // ... wait for answers ...
@@ -62,41 +70,42 @@ Backend emit `question_end` dan `update_leaderboard` **sebelum** atau **bersamaa
    ```
 
 ### Suggested Fix:
+
 ```javascript
 // In gameHandler.js or similar
 
 function startGame(roomCode) {
   const room = rooms.get(roomCode);
-  
+
   // 1. Emit game:started
   io.to(roomCode).emit("game:started", {
     questionCount: room.questions.length,
-    quizId: room.quizId
+    quizId: room.quizId,
   });
-  
+
   // 2. Start first question immediately
   startQuestion(roomCode, 0);
-  
+
   // ❌ DO NOT emit question_end or leaderboard here!
 }
 
 function startQuestion(roomCode, qIndex) {
   const room = rooms.get(roomCode);
   const question = room.questions[qIndex];
-  
+
   // Reset answer tracking
   room.currentQuestionAnswers = [];
   room.questionStartTime = Date.now();
-  
+
   // Emit question_start
   io.to(roomCode).emit("question_start", {
     qIndex: qIndex,
     qText: question.question_text,
     options: question.options,
     duration: question.time_limit || 20,
-    points: question.points || 20
+    points: question.points || 20,
   });
-  
+
   // Schedule question_end after duration
   setTimeout(() => {
     endQuestion(roomCode, qIndex);
@@ -106,18 +115,18 @@ function startQuestion(roomCode, qIndex) {
 function endQuestion(roomCode, qIndex) {
   const room = rooms.get(roomCode);
   const question = room.questions[qIndex];
-  
+
   // 1. Emit question_end
   io.to(roomCode).emit("question_end", {
-    correctAnswerIdx: question.correct_idx
+    correctAnswerIdx: question.correct_idx,
   });
-  
+
   // 2. Calculate and emit leaderboard
   const leaderboard = calculateLeaderboard(room);
   io.to(roomCode).emit("update_leaderboard", {
-    leaderboard: leaderboard
+    leaderboard: leaderboard,
   });
-  
+
   // ✅ DO NOT auto-start next question
   // Wait for host to click "Next Question"
 }
@@ -128,15 +137,18 @@ function endQuestion(roomCode, qIndex) {
 ## 🐛 Bug #2: Off-by-One Error (n-1 Questions)
 
 ### Symptoms:
+
 - Quiz memiliki **3 soal**
 - Guru hanya bisa menampilkan **2 soal**
 - Soal ke-2 → klik "Next Question" → Game selesai ❌
 - Soal ke-3 tidak pernah muncul
 
 ### Root Cause:
+
 Backend question index management salah (0-based vs 1-based confusion)
 
 ### Expected Behavior:
+
 ```
 Quiz: 3 soal (index 0, 1, 2)
 
@@ -148,6 +160,7 @@ Flow:
 ```
 
 ### Actual Behavior (BUG):
+
 ```
 Quiz: 3 soal (index 0, 1, 2)
 
@@ -160,12 +173,13 @@ Flow:
 ### Backend Investigation Needed:
 
 1. **Check question counter:**
+
    ```javascript
    // ❌ WRONG - Off by one
    if (currentQuestionIndex >= questions.length - 1) {
      endGame(); // This ends at index 1 for 3 questions!
    }
-   
+
    // ✅ CORRECT
    if (currentQuestionIndex >= questions.length) {
      endGame();
@@ -173,11 +187,12 @@ Flow:
    ```
 
 2. **Check `game:next` handler:**
+
    ```javascript
    // ❌ WRONG
    socket.on("game:next", (data) => {
      room.currentQuestionIndex++;
-     
+
      // Bug: Checks AFTER increment
      if (room.currentQuestionIndex >= room.questions.length - 1) {
        endGame(roomCode);
@@ -185,11 +200,11 @@ Flow:
        startQuestion(roomCode, room.currentQuestionIndex);
      }
    });
-   
+
    // ✅ CORRECT
    socket.on("game:next", (data) => {
      room.currentQuestionIndex++;
-     
+
      // Check with proper boundary
      if (room.currentQuestionIndex >= room.questions.length) {
        endGame(roomCode);
@@ -200,10 +215,11 @@ Flow:
    ```
 
 3. **Check initial index:**
+
    ```javascript
    // ❌ WRONG - Starts at 1
    room.currentQuestionIndex = 1;
-   
+
    // ✅ CORRECT - Starts at 0
    room.currentQuestionIndex = 0;
    ```
@@ -216,11 +232,15 @@ console.log("=== DEBUG QUESTION FLOW ===");
 console.log("Total questions:", room.questions.length);
 console.log("Current index:", room.currentQuestionIndex);
 console.log("Next index will be:", room.currentQuestionIndex + 1);
-console.log("Should end game?", room.currentQuestionIndex + 1 >= room.questions.length);
+console.log(
+  "Should end game?",
+  room.currentQuestionIndex + 1 >= room.questions.length
+);
 console.log("===========================");
 ```
 
 ### Test Case:
+
 ```sql
 -- Quiz dengan 3 soal (dari user's SQL)
 SELECT * FROM questions WHERE quiz_id = 'a0010001-0000-0000-0000-000000000001';
@@ -236,17 +256,20 @@ Bug: Question index 2 never displayed
 ## 🔧 Frontend Changes Already Applied:
 
 ### ✅ Fixed Race Conditions:
+
 1. Removed auto-timeout untuk leaderboard display
 2. Added guard untuk prevent premature state changes
 3. Only show leaderboard after valid question_end
 4. Added state validation before transitions
 
 ### ✅ Added Auto-Transition:
+
 - FEEDBACK → LEADERBOARD after 3 seconds
 - Smooth flow between states
 - Prevents UI stuck states
 
 ### Code Changes:
+
 - `app/play/[roomCode]/live/page.tsx`:
   - Line ~119: Removed `setTimeout` from `update_leaderboard`
   - Line ~104: Added guards di `question_end`
@@ -297,6 +320,7 @@ $ curl -X GET http://localhost:3001/api/quizzes
 ---
 
 ### Your SQL Data:
+
 ```sql
 -- Quiz 1: Dasar Komputer
 -- ID: a0010001-0000-0000-0000-000000000001
@@ -308,6 +332,7 @@ Question 3: "Manakah di bawah ini yang termasuk..."
 ```
 
 ### Testing Checklist:
+
 - [ ] All 3 questions display (currently only 2)
 - [ ] No premature feedback modal
 - [ ] No premature leaderboard (0pt)
@@ -359,11 +384,14 @@ Player count: 1
 ## 🎯 Action Items:
 
 ### Backend Team (Critical):
+
 1. **Fix event order in `start_game`** (Bug #1)
+
    - Don't emit `question_end` before first question
    - Don't emit `update_leaderboard` before first question
 
 2. **Fix question index boundary check** (Bug #2)
+
    - Change `>= length - 1` to `>= length`
    - Verify 0-based indexing throughout
 
@@ -373,6 +401,7 @@ Player count: 1
    - Log game state transitions
 
 ### Frontend Team (Completed):
+
 - ✅ Race condition guards
 - ✅ State validation
 - ✅ Auto-transition logic
@@ -393,4 +422,3 @@ Player count: 1
 **Priority:** 🔴 **CRITICAL**  
 **Impact:** Game completely broken - students can't play properly  
 **Estimated Fix Time:** 30-60 minutes backend work
-
