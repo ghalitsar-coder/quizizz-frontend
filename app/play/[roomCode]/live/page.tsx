@@ -45,7 +45,14 @@ export default function GameArenaPage() {
     socket.on(
       "game:started",
       (data: { questionCount: number; quizId?: string }) => {
+        const timestamp = new Date().toISOString();
+        console.log(
+          `\n========== EVENT: game:started [${timestamp}] ==========`
+        );
         console.log("🎮 Game started:", data);
+        console.log("Expected questions:", data.questionCount);
+        console.log("=================================================\n");
+
         setTotalQuestions(data.questionCount || 0);
 
         // Backend now includes quizId (per BACKEND_CHANGES_SUMMARY.md)
@@ -69,7 +76,15 @@ export default function GameArenaPage() {
 
     // Question starts (backend sends full question data via socket)
     socket.on("question_start", (data: any) => {
-      console.log("📝 Question started:", data);
+      const timestamp = new Date().toISOString();
+      console.log(
+        `\n========== EVENT: question_start [${timestamp}] ==========`
+      );
+      console.log("📝 Question INDEX:", data.qIndex);
+      console.log("📝 Question TEXT:", data.qText);
+      console.log("⏱️ Duration:", data.duration, "seconds");
+      console.log("Current game state:", gameState);
+      console.log("=================================================\n");
 
       setCurrentQuestion({
         qIndex: data.qIndex,
@@ -101,10 +116,28 @@ export default function GameArenaPage() {
 
     // Question ends (time up) - sync with server timer
     socket.on("question_end", (data: any) => {
-      console.log("⏱️ Question ended (server):", data);
+      const timestamp = new Date().toISOString();
+      console.log(
+        `\n========== EVENT: question_end [${timestamp}] ==========`
+      );
+      console.log("⏱️ Question ended (server)");
+      console.log("Correct answer index:", data.correctAnswerIdx);
+      console.log("Current question:", currentQuestion?.qIndex ?? "NONE");
+      console.log("Current game state:", gameState);
+      console.log("Has answered:", answerResult !== null);
 
-      // Force stop timer and disable answers (server says time is up)
-      if (!answerResult) {
+      // Guard: Only process if we have an active question
+      if (!currentQuestion) {
+        console.warn("⚠️ GUARD TRIGGERED: No active question - IGNORING EVENT");
+        console.log("=================================================\n");
+        return;
+      }
+
+      console.log("✅ Guard passed - processing question_end");
+      console.log("=================================================\n");
+
+      // Only show feedback if haven't answered yet
+      if (!answerResult && gameState === "PLAYING") {
         setAnswerResult({
           isCorrect: false,
           scoreEarned: 0,
@@ -117,14 +150,22 @@ export default function GameArenaPage() {
 
     // Leaderboard update
     socket.on("update_leaderboard", (data: any) => {
-      console.log("Leaderboard updated:", data);
+      const timestamp = new Date().toISOString();
+      console.log(
+        `\n========== EVENT: update_leaderboard [${timestamp}] ==========`
+      );
+      console.log("📊 Leaderboard data:", data);
+      console.log("Current game state:", gameState);
+      
       const leaderboardData = data.leaderboard || data;
-      setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : []);
-
-      // Show leaderboard after short delay
-      setTimeout(() => {
-        setGameState("LEADERBOARD");
-      }, 2000);
+      console.log("Player count:", leaderboardData.length);
+      if (leaderboardData.length > 0) {
+        console.log("Top player:", leaderboardData[0]);
+      }
+      console.log("=================================================\n");
+      
+      // Don't auto-show leaderboard - wait for explicit state transition
+      // Backend should control when to show leaderboard via game flow
     });
 
     // Game over (PRD: game:ended event)
@@ -172,6 +213,8 @@ export default function GameArenaPage() {
     setScore,
     answerResult,
     score,
+    currentQuestion,
+    gameState,
   ]);
 
   // Submit answer
@@ -205,6 +248,18 @@ export default function GameArenaPage() {
       socket?.emit("rejoin_room", { roomCode, nickname: playerName });
     }
   }, [isConnected, roomCode, playerName, gameState, socket]);
+
+  // Auto-transition from FEEDBACK to LEADERBOARD after 3 seconds
+  useEffect(() => {
+    if (gameState === "FEEDBACK" && leaderboard.length > 0) {
+      const timer = setTimeout(() => {
+        console.log("⏭️ Auto-transitioning to leaderboard...");
+        setGameState("LEADERBOARD");
+      }, 3000); // 3 seconds to view feedback
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, leaderboard, setGameState]);
 
   // Render based on game state
   if (!isConnected) {
